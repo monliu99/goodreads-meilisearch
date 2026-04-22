@@ -87,7 +87,11 @@
         font: inherit;
       }
 
-      input {
+      input[type="text"],
+      input[type="url"],
+      input[type="password"],
+      input[type="search"],
+      input[type="email"] {
         width: 100%;
         padding: 0.75rem 0.85rem;
         border-radius: 10px;
@@ -95,7 +99,11 @@
         background: #fff;
       }
 
-      input:focus {
+      input[type="text"]:focus,
+      input[type="url"]:focus,
+      input[type="password"]:focus,
+      input[type="search"]:focus,
+      input[type="email"]:focus {
         outline: 2px solid rgba(15, 118, 110, 0.18);
         border-color: var(--accent);
       }
@@ -228,9 +236,18 @@
       #hits .ais-Hits-list {
         list-style: none;
         display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 0.9rem;
         margin: 0;
         padding: 0;
+      }
+
+      #hits .ais-Hits-item {
+        display: flex;
+      }
+
+      #hits .ais-Hits-item > article {
+        flex: 1;
       }
 
       #pagination .ais-Pagination-list {
@@ -247,6 +264,32 @@
         border-radius: 12px;
         padding: 1rem;
         background: #fff;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .result-card .result-header {
+        margin-bottom: 0.4rem;
+      }
+
+      .result-card .book-meta {
+        min-height: 1.15rem;
+      }
+
+      .result-card .book-description {
+        min-height: calc(1.5em * 3);
+        color: var(--text);
+      }
+
+      .result-card .result-meta {
+        min-height: 1.4rem;
+        margin-top: auto;
+        padding-top: 0.5rem;
+      }
+
+      .result-card .goodreads-link {
+        margin-top: 0.4rem;
       }
 
       .result-title {
@@ -307,6 +350,76 @@
       mark {
         background: #fef08a;
         padding: 0 0.1rem;
+      }
+
+      .book-meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0 0 0.6rem;
+      }
+
+      .book-description {
+        margin: 0 0 0.7rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .tag-pill {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        margin: 0 0.3rem 0.3rem 0;
+        border-radius: 999px;
+        background: #f0f9ff;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+        font-size: 0.8rem;
+        font-family: inherit;
+        line-height: 1.4;
+        cursor: pointer;
+        transition: background 0.12s ease, color 0.12s ease;
+      }
+
+      .tag-pill:hover {
+        background: #0369a1;
+        color: #fff;
+        border-color: #0369a1;
+      }
+
+      .tag-pill[aria-pressed="true"] {
+        background: #0369a1;
+        color: #fff;
+        border-color: #0369a1;
+      }
+
+      .rating {
+        color: #eab308;
+        letter-spacing: 0.05em;
+        font-size: 0.95rem;
+      }
+
+      .rating .muted-star {
+        color: #d1d5db;
+      }
+
+      .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+      }
+
+      .goodreads-link {
+        display: inline-block;
+        margin-top: 0.4rem;
+        color: var(--accent);
+        font-size: 0.85rem;
+        text-decoration: none;
+      }
+
+      .goodreads-link:hover {
+        text-decoration: underline;
       }
 
       code {
@@ -397,17 +510,12 @@
           <div id="searchbox"></div>
           <div class="search-layout">
             <aside class="facets-pane">
-              <h3>Customize this app</h3>
-              <p class="muted">
-                This starter makes a generic best effort on titles, snippets, and metadata.
-                If you want schema-specific filters or prettier cards, edit this file.
-              </p>
-              <p class="muted">
-                A common next step is adding widgets such as <code>refinementList</code>
-                for fields like <code>category</code>, <code>tags</code>, <code>author</code>,
-                or whatever your data uses.
-              </p>
-              <div id="custom-filters"></div>
+              <h3>Filter books</h3>
+              <div id="filter-genre"></div>
+              <div id="filter-shelf"></div>
+              <div id="filter-rating"></div>
+              <div id="filter-year"></div>
+              <div id="filter-tags-hidden" hidden></div>
             </aside>
 
             <section>
@@ -549,7 +657,7 @@
               }),
               widgets.searchBox({
                 container: '#searchbox',
-                placeholder: 'Try: finance, climate, marketing, recipes, professors',
+                placeholder: 'Try: vonnegut, lighthouse, fiction, 1963…',
                 showReset: true,
                 showSubmit: true,
                 autofocus: Boolean(queryFromUrl),
@@ -595,12 +703,53 @@
               }),
             ];
 
-            // Want schema-specific filters? Add widgets here. For example:
-            // searchWidgets.splice(4, 0,
-            //   widgets.panel({ templates: { header: 'Category' } })(
-            //     widgets.refinementList({ container: '#custom-filters', attribute: 'category' })
-            //   )
-            // );
+            const bookFilters = [
+              widgets.panel({ templates: { header: 'Shelf' } })(
+                widgets.refinementList
+              )({ container: '#filter-shelf', attribute: 'shelf' }),
+              widgets.panel({ templates: { header: 'Genre' } })(
+                widgets.refinementList
+              )({
+                container: '#filter-genre',
+                attribute: 'genre',
+                sortBy: ['count:desc', 'name:asc'],
+              }),
+              widgets.panel({ templates: { header: 'My rating' } })(
+                widgets.refinementList
+              )({
+                container: '#filter-rating',
+                attribute: 'myRating',
+                sortBy: ['name:desc'],
+                transformItems: function (items) {
+                  return items.map(function (item) {
+                    const n = Number(item.label);
+                    item.label = n > 0 ? `${'★'.repeat(n)}${'☆'.repeat(5 - n)}` : 'Unrated';
+                    return item;
+                  });
+                },
+              }),
+              widgets.panel({ templates: { header: 'Original publication year' } })(
+                widgets.refinementList
+              )({
+                container: '#filter-year',
+                attribute: 'yearRange',
+                transformItems: function (items) {
+                  const order = ['Pre-1800', '1800–1899', '1900–1949', '1950–1999', '2000–2009', '2010–2019', '2020+'];
+                  return items.slice().sort(function (a, b) {
+                    return order.indexOf(a.label) - order.indexOf(b.label);
+                  });
+                },
+                limit: 10,
+              }),
+              widgets.refinementList({
+                container: '#filter-tags-hidden',
+                attribute: 'tags',
+                operator: 'or',
+                limit: 200,
+              }),
+            ];
+
+            searchWidgets.splice(4, 0, ...bookFilters);
 
             search.addWidgets(searchWidgets);
             search.on('render', function () {
@@ -609,8 +758,22 @@
               if (statsText) {
                 resultsMeta.textContent = statsText;
               }
+              markActiveTagPills(search);
             });
             search.start();
+
+            document.querySelector('#hits').addEventListener('click', function (event) {
+              const pill = event.target.closest('.tag-pill');
+              if (!pill) return;
+              const tag = pill.dataset.tag;
+              if (!tag) return;
+              event.preventDefault();
+              const helper = search.helper;
+              const toggle = helper.toggleRefinement
+                || helper.toggleDisjunctiveFacetRefinement
+                || helper.toggleFacetRefinement;
+              toggle.call(helper, 'tags', tag).search();
+            });
           } catch (error) {
             showError(error.message || String(error));
             searchApp.hidden = true;
@@ -620,26 +783,49 @@
 
         function renderHit(hit) {
           const formatted = hit._formatted ?? {};
-          const title = pickHighlightedValue(formatted, hit, ['title', 'name', 'headline', 'courseTitle'])
-            || buildCompositeTitle(hit)
+          const title = pickHighlightedValue(formatted, hit, ['title'])
             || escapeHtml(String(hit.id ?? 'Untitled result'));
-          const description = pickHighlightedValue(formatted, hit, ['description', 'summary', 'abstract', 'body', 'text', 'content'])
-            || buildAdaptiveDescription(hit);
-          const url = pickRawValue(hit, ['url', 'link', 'website', 'homepage']) || '';
-          const metadataBadges = renderMetadataBadges(hit);
-          const rawPreview = renderRawPreview(hit);
+          const author = pickHighlightedValue(formatted, hit, ['author']);
+          const description = pickHighlightedValue(formatted, hit, ['description']);
+          const url = pickRawValue(hit, ['url']) || '';
+
+          const metaParts = [];
+          if (author) metaParts.push(author);
+          if (hit.year) metaParts.push(escapeHtml(String(hit.year)));
+          if (hit.publisher) metaParts.push(escapeHtml(String(hit.publisher)));
+          if (hit.pages) metaParts.push(`${hit.pages} pages`);
+          const metaLine = metaParts.join(' · ');
+
+          const rating = Number(hit.myRating) || 0;
+          const ratingMarkup = rating > 0
+            ? `<span class="rating" title="My rating: ${rating}/5">${'★'.repeat(rating)}<span class="muted-star">${'★'.repeat(5 - rating)}</span></span>`
+            : '';
+
+          const tagPills = Array.isArray(hit.tags)
+            ? hit.tags.slice(0, 5).map(function (t) {
+                const safe = escapeHtml(String(t));
+                return `<button type="button" class="tag-pill" data-tag="${escapeAttribute(String(t))}">${safe}</button>`;
+              }).join('')
+            : '';
 
           const titleMarkup = url
             ? `<a href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${title}</a>`
             : title;
 
+          const descriptionMarkup = description
+            ? `<p class="book-description">${description}</p>`
+            : `<p class="book-description muted"><em>No description available.</em></p>`;
+
           return `
             <article class="result-card">
-              <h3 class="result-title">${titleMarkup}</h3>
-              ${description ? `<p>${description}</p>` : ''}
-              ${metadataBadges}
-              <p class="muted"><code>${escapeHtml(String(hit.id ?? ''))}</code></p>
-              ${rawPreview}
+              <div class="result-header">
+                <h3 class="result-title">${titleMarkup}</h3>
+                ${ratingMarkup}
+              </div>
+              <p class="book-meta">${metaLine || '&nbsp;'}</p>
+              ${descriptionMarkup}
+              <div class="result-meta">${tagPills}</div>
+              ${url ? `<a class="goodreads-link" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">View on Goodreads ↗</a>` : ''}
             </article>
           `;
         }
@@ -749,6 +935,19 @@
             .replace(/^./, function (char) {
               return char.toUpperCase();
             });
+        }
+
+        function markActiveTagPills(search) {
+          const active = new Set(search.helper.getRefinements('tags').map(function (r) {
+            return r.value;
+          }));
+          document.querySelectorAll('.tag-pill').forEach(function (pill) {
+            if (active.has(pill.dataset.tag)) {
+              pill.setAttribute('aria-pressed', 'true');
+            } else {
+              pill.removeAttribute('aria-pressed');
+            }
+          });
         }
 
         function showError(message) {
