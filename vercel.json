@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/search-app/index.html" },
+    { "source": "/api/meili/(.*)", "destination": "/api/meili" }
+  ]
+}

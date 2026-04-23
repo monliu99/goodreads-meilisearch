@@ -463,50 +463,13 @@
       </header>
 
       <section class="panel">
-        <h2>Connection</h2>
-        <p class="help">
-          Paste the values from your dashboard. Use a <strong>search-only</strong>
-          key in the browser.
-        </p>
-        <form id="config-form" class="stack">
-          <label>
-            <span>Meilisearch URL</span>
-            <input id="host" name="host" type="url" placeholder="http://search.858.mba:7700" required />
-          </label>
-
-          <label>
-            <span>Index name</span>
-            <input id="index" name="index" type="text" placeholder="fts-bald-chicken" required />
-          </label>
-
-          <label>
-            <span>Search-only API key</span>
-            <input id="key" name="key" type="password" placeholder="search-only key" required />
-          </label>
-
-          <div class="row">
-            <button type="submit">Save connection</button>
-            <button type="button" id="clear-config" class="secondary">Clear saved values</button>
-          </div>
-        </form>
-        <p id="connection-status" class="status muted">No connection saved yet.</p>
-      </section>
-
-      <section class="panel">
         <h2>Search</h2>
         <div class="toolbar">
-          <p id="results-meta" class="muted">Save a connection to enable the search UI.</p>
+          <p id="results-meta" class="muted">InstantSearch is ready.</p>
           <p id="error-message" class="error" hidden></p>
         </div>
 
-        <div id="search-disabled" class="empty-state">
-          <p>The search UI will appear here after you save a valid connection.</p>
-          <p class="muted">
-            If your index is empty, upload documents first with your write key from the command line.
-          </p>
-        </div>
-
-        <div id="search-app" hidden>
+        <div id="search-app">
           <div id="searchbox"></div>
           <div class="search-layout">
             <aside class="facets-pane">
@@ -536,109 +499,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@meilisearch/instant-meilisearch@0/dist/instant-meilisearch.umd.min.js"></script>
     <script>
       (function () {
-        const storageKey = 'mgt858-meili-search-app';
-        const configForm = document.querySelector('#config-form');
-        const hostInput = document.querySelector('#host');
-        const indexInput = document.querySelector('#index');
-        const keyInput = document.querySelector('#key');
-        const connectionStatus = document.querySelector('#connection-status');
+        const INDEX_NAME = 'fts-precious-lemur';
         const resultsMeta = document.querySelector('#results-meta');
         const errorMessage = document.querySelector('#error-message');
-        const clearConfigButton = document.querySelector('#clear-config');
         const searchApp = document.querySelector('#search-app');
-        const searchDisabled = document.querySelector('#search-disabled');
         const params = new URLSearchParams(window.location.search);
         const queryFromUrl = params.get('q') ?? '';
 
-        hydrateConfig();
-        const config = readConfig();
-        renderConnectionStatus(config);
-        if (hasCompleteConfig(config)) {
-          startSearch(config);
-        }
+        startSearch();
 
-        configForm.addEventListener('submit', function (event) {
-          event.preventDefault();
-          const nextConfig = {
-            host: normalizeHost(hostInput.value),
-            index: indexInput.value.trim(),
-            key: keyInput.value.trim(),
-          };
-          localStorage.setItem(storageKey, JSON.stringify(nextConfig));
-          window.location.reload();
-        });
-
-        clearConfigButton.addEventListener('click', function () {
-          localStorage.removeItem(storageKey);
-          window.location.reload();
-        });
-
-        function hydrateConfig() {
-          const currentConfig = readConfig();
-          hostInput.value = currentConfig.host ?? '';
-          indexInput.value = currentConfig.index ?? '';
-          keyInput.value = currentConfig.key ?? '';
-        }
-
-        function readConfig() {
-          const saved = readSavedConfig();
-          const fromUrl = {
-            host: normalizeHost(params.get('host') ?? ''),
-            index: (params.get('index') ?? '').trim(),
-            key: (params.get('key') ?? '').trim(),
-          };
-
-          return {
-            host: fromUrl.host || saved.host || '',
-            index: fromUrl.index || saved.index || '',
-            key: fromUrl.key || saved.key || '',
-          };
-        }
-
-        function readSavedConfig() {
-          try {
-            const raw = localStorage.getItem(storageKey);
-            return raw ? JSON.parse(raw) : {};
-          } catch (_error) {
-            return {};
-          }
-        }
-
-        function hasCompleteConfig(currentConfig) {
-          return Boolean(currentConfig.host && currentConfig.index && currentConfig.key);
-        }
-
-        function normalizeHost(value) {
-          return value.trim().replace(/\/$/, '');
-        }
-
-        function renderConnectionStatus(currentConfig) {
-          if (!hasCompleteConfig(currentConfig)) {
-            connectionStatus.textContent = 'No connection saved yet.';
-            connectionStatus.classList.add('muted');
-            return;
-          }
-          connectionStatus.textContent = `Ready to search ${currentConfig.index} at ${currentConfig.host}`;
-          connectionStatus.classList.remove('muted');
-        }
-
-        function startSearch(currentConfig) {
+        function startSearch() {
           clearError();
-          searchDisabled.hidden = true;
-          searchApp.hidden = false;
-          resultsMeta.textContent = 'InstantSearch is ready.';
 
           try {
-            const searchClientConfig = window.instantMeiliSearch(currentConfig.host, currentConfig.key, {
+            const searchClientConfig = window.instantMeiliSearch('/api/meili', 'placeholder', {
               primaryKey: 'id',
             });
 
             const search = window.instantsearch({
-              indexName: currentConfig.index,
+              indexName: INDEX_NAME,
               searchClient: searchClientConfig.searchClient,
               initialUiState: queryFromUrl
                 ? {
-                    [currentConfig.index]: {
+                    [INDEX_NAME]: {
                       query: queryFromUrl,
                     },
                   }
@@ -776,8 +659,6 @@
             });
           } catch (error) {
             showError(error.message || String(error));
-            searchApp.hidden = true;
-            searchDisabled.hidden = false;
           }
         }
 

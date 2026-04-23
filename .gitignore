@@ -1,6 +1,7 @@
 .env
 .env.local
 .DS_Store
+.vercel/
 __pycache__/
 *.pyc
 sample-data/goodreads_library_export.csv
